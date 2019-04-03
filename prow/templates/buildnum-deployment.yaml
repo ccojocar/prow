@@ -8,7 +8,7 @@ metadata:
 spec:
   replicas: 1 # one canonical source of build numbers
   strategy:
-    type: RollingUpdate
+    type: Recreate
   template:
     metadata:
       labels:
@@ -18,12 +18,8 @@ spec:
       terminationGracePeriodSeconds: {{ .Values.buildnum.terminationGracePeriodSeconds }}
       containers:
       - name: {{ template "buildnum.name" . }}
-        image: {{ .Values.buildnum.image.repository }}:{{ .Values.buildnum.image.jxTag }}
+        image: {{ tpl .Values.buildnum.image.repository . }}:{{ tpl .Values.buildnum.image.tag . }}
         imagePullPolicy: {{ .Values.buildnum.imagePullPolicy }}
-{{ if .Values.buildnum.command }}
-        command:
-{{ toYaml .Values.buildnum.command | indent 10 }}
-{{- end }}
 {{ if .Values.buildnum.args }}
         args:
 {{ toYaml .Values.buildnum.args | indent 10 }}
@@ -36,10 +32,22 @@ spec:
             protocol: TCP
         livenessProbe:
           httpGet:
-            path: {{ .Values.buildnum.probe.livenessPath }}
-            port: http
+            path: {{ .Values.buildnum.probe.liveness.path }}
+            port: {{ .Values.buildnum.probe.liveness.port }}
+          initialDelaySeconds: 3
+          periodSeconds: 3
         readinessProbe:
           httpGet:
-            path: {{ .Values.buildnum.probe.readinessPath }}
-            port: http
+            path: {{ .Values.buildnum.probe.readiness.path }}
+            port: {{ .Values.buildnum.probe.readiness.port }}
+          initialDelaySeconds: 10
+          periodSeconds: 3
+          timeoutSeconds: 600
+        volumeMounts:
+        - mountPath: /store
+          name: {{ template "buildnum.name" . }}-volume
+      volumes:
+        - name: {{ template "buildnum.name" . }}-volume
+          persistentVolumeClaim:
+            claimName: {{ template "buildnum.name" . }}
 {{ end }}

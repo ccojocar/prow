@@ -1,0 +1,14 @@
+{{ if .Values.buildnum.enabled }}
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  labels:
+    app: {{ template "buildnum.name" . }}
+  name: {{ template "buildnum.name" . }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+{{ end }}
